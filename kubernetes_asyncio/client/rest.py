@@ -117,7 +117,7 @@ class RESTClientObject(object):
 
         post_params = post_params or {}
         headers = headers or {}
-        timeout = _request_timeout or 5 * 60
+        timeout = 5 * 60 if _request_timeout is None else _request_timeout
 
         if 'Content-Type' not in headers:
             headers['Content-Type'] = 'application/json'
