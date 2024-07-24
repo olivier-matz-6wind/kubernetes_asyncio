@@ -85,6 +85,7 @@ async def main():
             tty=False,
         )
         print(f"Response: {ret}")
+        print(f"Exit code: {ws_api.returncode}")
 
 
 if __name__ == "__main__":

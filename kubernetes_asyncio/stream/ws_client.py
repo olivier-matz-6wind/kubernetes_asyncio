@@ -10,6 +10,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import json
+
 from six.moves.urllib.parse import urlencode, urlparse, urlunparse
 
 from kubernetes_asyncio.client import ApiClient
@@ -53,6 +55,18 @@ class WsApiClient(ApiClient):
                  cookie=None, pool_threads=1, heartbeat=None):
         super().__init__(configuration, header_name, header_value, cookie, pool_threads)
         self.heartbeat = heartbeat
+        self.returncode = None
+
+    def parse_error_data(self, error_data):
+        """
+        Parse data received on ERROR_CHANNEL, and set self.returncode accordingly.
+        """
+        error_data_json = json.loads(error_data)
+        if error_data_json.get("status") == "Success":
+            self.returncode = 0
+        else:
+            self.returncode = int(error_data_json["details"]["causes"][0]['message'])
+        return self.returncode
 
     async def request(self, method, url, query_params=None, headers=None,
                       post_params=None, body=None, _preload_content=True,
@@ -79,9 +93,11 @@ class WsApiClient(ApiClient):
 
         url = get_websocket_url(url)
 
+        self.returncode = None
         if _preload_content:
 
             resp_all = ''
+            error_data = ''
             async with self.rest_client.pool_manager.ws_connect(url, headers=headers, heartbeat=self.heartbeat) as ws:
                 async for msg in ws:
                     msg = msg.data.decode('utf-8')
@@ -91,6 +107,11 @@ class WsApiClient(ApiClient):
                         if data:
                             if channel in [STDOUT_CHANNEL, STDERR_CHANNEL]:
                                 resp_all += data
+                            elif channel == ERROR_CHANNEL:
+                                error_data += data
+
+            if error_data:
+                self.parse_error_data(error_data)
 
             return WsResponse(200, resp_all.encode('utf-8'))
 
