@@ -53,6 +53,7 @@ class WsApiClient(ApiClient):
                  cookie=None, pool_threads=1, heartbeat=None):
         super().__init__(configuration, header_name, header_value, cookie, pool_threads)
         self.heartbeat = heartbeat
+        self.error_data = None
 
     async def request(self, method, url, query_params=None, headers=None,
                       post_params=None, body=None, _preload_content=True,
@@ -82,6 +83,7 @@ class WsApiClient(ApiClient):
         if _preload_content:
 
             resp_all = ''
+            error_data = ''
             async with self.rest_client.pool_manager.ws_connect(url, headers=headers, heartbeat=self.heartbeat) as ws:
                 async for msg in ws:
                     msg = msg.data.decode('utf-8')
@@ -91,6 +93,11 @@ class WsApiClient(ApiClient):
                         if data:
                             if channel in [STDOUT_CHANNEL, STDERR_CHANNEL]:
                                 resp_all += data
+                            elif channel == ERROR_CHANNEL:
+                                error_data += data
+
+            if error_data:
+                self.error_data = error_data
 
             return WsResponse(200, resp_all.encode('utf-8'))
 
