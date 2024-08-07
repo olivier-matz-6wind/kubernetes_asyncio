@@ -117,4 +117,4 @@ class WsApiClient(ApiClient):
 
         else:
 
-            return await self.rest_client.pool_manager.ws_connect(url, headers=headers, heartbeat=self.heartbeat)
+            return self.rest_client.pool_manager.ws_connect(url, headers=headers, heartbeat=self.heartbeat)
